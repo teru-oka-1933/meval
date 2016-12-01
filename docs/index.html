@@ -1,0 +1,1486 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+
+<html>
+
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<title>形態素解析器性能評価システムMevAL</title>
+</head>
+
+
+<body>
+
+
+<!--MevALのタイトル-->
+<p>
+<a name="top">
+<img src="image/meval_title.png" alt="形態素解析器性能評価システムMevAL">
+</a>
+</p>
+
+
+
+
+<h1>What's MevAL ?</h1>
+<hr>
+<p>
+	MevAL（メバル）は，形態素解析器の性能評価およびエラー分析を行うためのツールです．<br>
+	実装はJAVAで行なっています．<br>
+	入力は形態素解析器MeCabの標準的な出力形式（<a href="#mecab_style">MeCab形式</a>）に準拠しています．<br>
+	また，入出力ファイルの文字コードは，UTF-8 ONLYで，
+	入力ファイルの改行コードは「&yen;n」，「&yen;r」，「&yen;r&yen;n」すべてに対応していますが，
+	出力ファイルの改行コードは「\n」で固定です．<br>
+	画面表示は，システム標準の文字コード，改行文字で行います．
+</p>
+
+
+<h2><a name="mecab_style">MeCab形式(.mecab)</a></h2>
+<hr>
+<p>
+	形態素解析器MeCabの標準的な出力形式．
+	「.mecab」という拡張子はコーパス管理ツール「Chaki」に由来する．<br>
+	各行は，文末を表す記号「EOS」，
+	もしくは単語分割後の１語を表す「表層形（フィールド０）
+	<strong>&yen;t</strong>フィールド１,フィールド２,...」の形となっています．<br>
+	「フィールド１,フィールド２,...」の部分はCSV形式に準拠しています．
+</p>
+<table border="1" width="100%"><tr><td><pre>
+今日    名詞,副詞可能,*,*,*,*,今日,キョウ,キョー
+は      助詞,係助詞,*,*,*,*,は,ハ,ワ
+いい    形容詞,自立,*,*,形容詞・イイ,基本形,いい,イイ,イイ
+天気    名詞,一般,*,*,*,*,天気,テンキ,テンキ
+です    助動詞,*,*,*,特殊・デス,基本形,です,デス,デス
+EOS
+すもも  名詞,一般,*,*,*,*,すもも,スモモ,スモモ
+も      助詞,係助詞,*,*,*,*,も,モ,モ
+もも    名詞,一般,*,*,*,*,もも,モモ,モモ
+も      助詞,係助詞,*,*,*,*,も,モ,モ
+もも    名詞,一般,*,*,*,*,もも,モモ,モモ
+EOS
+</pre></td></tr></table>
+
+
+<h1>更新履歴</h1>
+<hr>
+<dl>
+	<dt>2014.12.10</dt>
+	<dd><a href="jar/meval_beta.jar">BETA版</a> 公開．</dd>
+</dl>
+
+
+<h1>ダウンロード</h1>
+<hr>
+<p>Jarファイルを公開しています．下記のファイルをダウンロードし，クラスパスを通して使用してください．</p>
+<h3>最新版</h3><p><a href="jar/meval_beta.jar">meval_beta.jar</a></p>
+<p>
+	またMevALを使用するためには，以下のライブラリが必要です．<br>
+	それぞれ下記のページからあらかじめダウンロードし，クラスパスを通しておいてください．<br>
+	<ul>
+		<li>
+			<p>コマンドライン引数を処理</p>
+			<ul>
+				<h3>commons-cli</h3>
+				<p><a href="http://commons.apache.org/proper/commons-cli/">http://commons.apache.org/proper/commons-cli/</a></p>
+				<p>（commons-cli-1.2.jarで動作を確認）</p>
+			</ul>
+		</li>
+		<li>
+			<p>半角文字の認識のために使用</p>
+			<ul>
+				<h3>icu</h3>
+				<p><a href="http://site.icu-project.org/">http://site.icu-project.org/</a></p>
+				<p>（icu4j-50_1_1.jarで動作を確認）</p>
+			</ul>
+		</li>
+	</ul>
+</p>
+
+
+<h1>MevALでできること</h1>
+<hr>
+<p>MevALには以下の機能が揃っています．</p>
+
+<ul>
+	<li>
+		<p><a href="#scorer">スコアラー</a></p>
+		<ul><p>
+			形態素解析器の自動形態素解析結果を，正解データと比べて評価するためのツール<br>
+			単語認定の性能（Precision, Recall, F値）を段階的に評価します<br>
+			(MeCabに同梱のmecab-system-evalの改良版)
+  		</p></ul>
+ 	</li>
+
+	<li>
+		<p><a href="#test">検定ツール</a></p>
+		<ul>
+			<p>
+				２つの自動形態素解析手法の単語認定性能を比較し，
+				性能に有意差があるか調べるためのツール
+			</p>
+			<li><p><a href="#prop_test">２群の母比率の差の検定</a> : Precision, Recallの検定</p></li>
+			<li><p><a href="#bootstrap_test">ブートストラップ検定</a> : F値, Precision, Recallの検定</p></li>
+		</ul>
+	</li>
+
+	<li>
+		<p><a href="#err_analysis">エラー分析ツール</a></p>
+		<ul>
+			<li><p><a href="#wbd_err_analysis">単語境界判定のエラー分析</a></p></li>
+			<li><p><a href="#pos_err_analysis">品詞タグ付けのエラー分析</a></p></li>
+		</ul>
+	</li>
+
+	<li>
+		<p><a href="#tool">その他便利機能</a></p>
+		<ul>
+			<li><p>
+				<a href="#count">コーパスの統計情報の表示</a> : <a href="#mecab_style">MeCab形式</a>のファイル中の文数，
+				単語数，表層形文字数（Code Point数）をカウントする
+			</p></li>
+			<li><p><a href="#shuffle">シャッフル</a> : <a href="#mecab_style">MeCab形式</a>のファイル中の文をシャッフルする</p></li>
+			<li><p>
+				<a href="#divide">コーパスの分割</a> : <a href="#mecab_style">MeCab形式</a>のファイル中の文を任意の比率で訓練（train），
+				評価（test）（，開発（dev））に分割する
+			</p></li>
+			<li><p><a href="#flat">平文化</a> : <a href="#mecab_style">MeCab形式</a>のファイルから表層形だけを抽出し，平文テキスト化する</p></li>
+		</ul>
+	</li>
+</ul>
+
+
+
+<!--ページトップへのリンク-->
+<p><a href="#top">▲ページトップへ</a></p>
+<p><br></p>
+
+
+
+<h1><a name="scorer">スコアラー（Scorer）</a></h1>
+<hr>
+<p>
+	形態素解析器の自動形態素解析結果を正解データと比べて，単語認定の性能を評価します．<br>
+	(MeCabに同梱のmecab-system-evalの改良版)<br>
+	評価値は，Preision（適合率）, Recall（再現率），F値です．
+	計算式は以下の通り．
+</p>
+<ul>
+	<li><p>Precision = COR / PRD</p></li>
+	<li><p>Recall = COR / GLD</p></li>
+	<ul>
+		<li><p>COR: 単語認定に成功した単語数</p></li>
+		<li><p>PRD: 自動形態素解析結果中の総単語数</p></li>
+		<li><p>GLD: 正解アノテーションデータ中の総単語数</p></li>
+	</ul>
+	<li><p>F値 = (2 * Precision * Recall) / (Precision + Recall)</p></li>
+</ul>
+
+<p>単語認定の性能評価（= CORの計算）は通常，以下のように段階的に実施します．</p>
+
+<table border="1" width="100%"><tr><td>
+<h2>例: Kudo et al., 2004</h2>
+
+<h3>使用辞書: IPA-Dic</h3>
+<table border="1" rules="cols">
+<tr><th>フィールド番号</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th></tr>
+<tr><th>フィールド名</th><th>表層形</th><th>品詞</th><th>品詞細分類1</th><th>品詞細分類2</th><th>品詞細分類3</th><th>活用型</th><th>活用形</th><th>基本形</th><th>読み</th><th>発音</th></tr>
+<tr align="center"><td>例</td><td>すもも</td><td>名詞</td><td>一般</td><td>*</td><td>*</td><td>*</td><td>*</td><td>すもも</td><td>スモモ</td><td>スモモ</td></tr>
+</table>
+<p>（MevAL内部では，フィールド0以外のフィールド値"*"は空文字""と同一視されます）</p>
+
+<dl>
+	<dt><p>レベル1: seg（表層形認定性能）</p></dt>
+	<dd><p>
+		COR = 自動解析結果の単語のうち，表層形（フィールド0）の認定に成功した数
+		（=文中での開始位置と終了位置が両方正しく認定できた単語の数）
+	</p></dd>
+
+	<dt><p>レベル2: top（品詞認定性能）</p></dt>
+	<dd><p>
+		COR = 表層形（フィールド0）の認定に成功した単語の内，
+		さらに品詞（フィールド1）の認定に成功した数
+		（=自動付与した「品詞」が正解アノテーションと一致した単語の数）
+	</p></dd>
+
+	<dt><p>レベル3: all</p></dt>
+	<dd><p>
+		COR = 表層形（フィールド0）と品詞（フィールド1）の両方の認定に成功した単語の内，
+		さらに品詞細分類1～3（フィールド2～4）と活用型（フィールド5），活用形（フィールド6），
+		基本形（フィールド7）のすべての認定に成功した単語の数
+	</p></dd>
+</dl>
+
+
+
+</td></tr></table>
+
+<p>また，完全一致（= 当該文内の全単語が正解アノテーションと一致）した文の割合も計算します（Correctly Analysed Sentences）．</p>
+
+
+
+<h2>使い方</h2>
+<hr>
+
+<h3>必須オプション</h3>
+
+<dl>
+	<dt><p>-g, --gold ファイル名</p></dt>
+	<dd><p>形態素解析の正解アノテーション（<a href="#mecab_style">MeCab形式</a>）</p></dd>
+	
+	<dt><p>-p, --pred ファイル名</p></dt>
+	<dd><p>自動形態素解析した結果（<a href="#mecab_style">MeCab形式</a>）</p></dd>
+</dl>
+
+<p>
+	（-gで指定したファイルと，-pで指定したファイルは，いずれも同一のテキストに対して，
+	自動or手動で形態素解析を行なった結果でなくてはいけない．
+	また，ファイル中の文の順序は，両方のファイルで一致している必要がある）
+</p>
+
+<h3>任意オプション</h3>
+<dl>
+	<dt><p>-f, --field "フィールド番号"</p></dt>
+	<dd><p>
+			評価に使用するフィールドを指定します．
+			フォーマットは，
+		</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>-f "レベル1の評価で使うフィールド番号,レベル2の評価で使うフィールド番号,レベル3の評価で使うフィールド番号, ..."</pre>
+		</td></tr></table>
+		<p>であり，例えば以下のように書きます．</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>-f "1,2,4,6"</pre>
+		</td></tr></table>
+		<p>
+			各レベルの評価に使うフィールドは，複数個指定可能です．
+			複数個指定する場合は，以下のように，"+"でフィールド番号をつなげて書きます．
+		</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>-f "1+2+3+4,5+6,7+8"</pre>
+		</td></tr></table>
+		<p>
+			-fオプションを使用しない場合，レベル0として表層形（フィールド0）の認定性能のみ評価します．<br>
+			-fオプションを使用した場合でも，必ず最初にレベル0として表層形（フィールド0）の認定性能を評価します．<br>
+			そのため，-fオプションでは，レベル0以降の評価に使うフィールド番号を指定します．<br>
+			また，レベルiで評価に使ったフィールドは，レベルj(>i)の評価にも自動で使われるので，重複して指定する必要はありません．
+			以下の２つは，いずれも同じ結果となります．
+		</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>-f "1,2,3,4"</pre>
+		</td></tr></table>
+		<p></p> <!--空行-->
+		<table border="1" width="100%"><tr><td>
+			<pre>-f "1,1+2,1+2+3,1+2+3+4"</pre>
+		</td></tr></table>
+		<p>例えば，Kudo et al., 2004の評価を再現する場合，-fオプションは以下のように指定します．</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>-f "1,2+3+4+5+6+7"</pre>
+		</td></tr></table><br>
+		<p>
+			注：　レベル０以外でフィールド０を評価に使った場合は，表層形自体の一致を評価しますが，
+			レベル０では，単語の開始位置と終了位置のみで評価を行なっているため，
+			自動解析結果中で表層形文字列が書き変わっていたとしても，
+			表層形文字列長さえ保持されていれば，問題ありません．
+		</p>
+	</p></dd>
+	
+	<dt><p>-h, --help</p></dt>
+	<dd><p> ヘルプの表示</p></dd>
+	<dd>
+		<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.Scorer -h
+
+========================================
+MEVAL SCORER
+========================================
+
+usage: meval.Scorer [options]
+ -f,--field &lt;arg&gt;   Field numbers using at each level evaluation (e.g.,
+                    "1,2+3+4,7+9")
+ -g,--gold &lt;arg&gt;    *Gold-annotation file (.mecab)
+ -h,--help          Help
+ -p,--pred &lt;arg&gt;    *System-predict file (.mecab)
+</pre>
+		</td></tr></table></dd>
+	
+</dl>
+
+
+
+<h3>使用例</h3>
+<table border="1" width="100%"><tr><td><pre>
+% java meval.Scorer -g gold.mecab -p pred.mecab -f "1+2+3+4,5+6,7+8"
+
+========================================
+MEVAL SCORER
+========================================
+Gold:  gold.mecab
+Pred:  test.mecab
+----------------------------------------
+         Field Num
+LEVEL 0 : 0
+LEVEL 1 : +1+2+3+4
+LEVEL 2 : +5+6
+LEVEL 3 : +7+8
+----------------------------------------
+       Sentence Num: 5943
+Gold Word Num (GLD): 127893
+Pred Word Num (PRD): 128169
+      Character Num: 202898
+========================================
+LEVEL 0 : 0
+========================================
+Correctly Analysed Sentences:
+94.97% (5644/5943 = 0.94968873)
+----------------------------------------
+COR : 127325
+----------------------------------------
+Prec. : 99.34% (127325/128169 = 0.99341494)
+Rec.  : 99.56% (127325/127893 = 0.9955588)
+F     : 99.45  (0.99448574)
+========================================
+LEVEL 1 : +1+2+3+4
+========================================
+Correctly Analysed Sentences:
+83.17% (4943/5943 = 0.83173484)
+----------------------------------------
+COR : 126384
+----------------------------------------
+Prec. : 98.61% (126384/128169 = 0.9860731)
+Rec.  : 98.82% (126384/127893 = 0.9882011)
+F     : 98.71  (0.98713595)
+========================================
+LEVEL 2 : +5+6
+========================================
+Correctly Analysed Sentences:
+81.57% (4848/5943 = 0.81574965)
+----------------------------------------
+COR : 126241
+----------------------------------------
+Prec. : 98.5% (126241/128169 = 0.98495734)
+Rec.  : 98.71% (126241/127893 = 0.98708296)
+F     : 98.6  (0.986019)
+========================================
+LEVEL 3 : +7+8
+========================================
+Correctly Analysed Sentences:
+76.8% (4564/5943 = 0.76796234)
+----------------------------------------
+COR : 125817
+----------------------------------------
+Prec. : 98.16% (125817/128169 = 0.9816492)
+Rec.  : 98.38% (125817/127893 = 0.9837677)
+F     : 98.27  (0.9827073)
+</pre></td></tr></table>
+
+
+
+<!--ページトップへのリンク-->
+<p><a href="#top">▲ページトップへ</a></p>
+<p><br></p>
+
+
+
+<h1><a name="test">検定ツール</a></h1>
+<hr>
+<p>2つの自動形態素解析手法の単語認定性能を比較し，性能に有意差があるか調べるためのツール．</p>
+
+<h2><a name="prop_test">２群の母比率の差の検定 (PropTest)</a></h2>
+<hr>
+
+<p>
+	PropTestでは，指定した2手法（Method1, Method2）の，あるレベルにおけるPrecision間，
+	もしくはRecall間に有意差があるか調べるため，以下の検定統計量Zを電卓的に計算します．
+</p>
+
+<dl>
+	<dt><h3>Precisionの検定用のZ:</h3></dt>
+	<dd><p><img src="image/eq_prop_test_Z_prec.png" alt="統計検定量Zの計算式（Precision用）"></p></dd>
+
+	<dt><h3>Recallの検定用のZ: </h3></dt>
+	<dd><p><img src="image/eq_prop_test_Z_rec.png" alt="統計検定量Zの計算式（Recall用）"></p></dd>
+</dl>
+
+<ul>
+	<li><p>COR1 : Method1の検定対象レベルにおけるCOR</p></li>
+	<li><p>PRD1 : Method1のPRD</p></li>
+	<li><p>GLD1 : Method1のGLD</p></li>
+	<li><p>COR2 : Method2の検定対象レベルにおけるCOR</p></li>
+	<li><p>PRD2 : Method2のPRD</p></li>
+	<li><p>GLD2 : Method2のGLD</p></li>
+</ul>
+
+<p>
+	PRD, GLDおよび，各レベルにおけるCORは，Scorerを使って調べることができます．<br>
+	COR, PRD, GLDの詳細については，<a href="#scorer">スコアラー</a>の項目を参照してください．
+</p>
+
+<p>検定結果と，p値，およびZの関係は以下の通り．</p>
+
+<ul>
+	<li><p>「両側検定・有意水準5%で有意差有り」 = 「p値 &lt;= 0.025」 = 「統計検定量Z &gt;= 1.960」</p></li>
+	<li><p>「両側検定・有意水準1%で有意差有り」 = 「p値 &lt;= 0.005 」 = 「統計検定量Z &gt;= 2.576」</p></li>
+	<li><p>「片側検定・有意水準5%で有意差有り」 = 「p値 &lt;= 0.05」 = 「統計検定量Z &gt;= 1.645」</p></li>
+	<li><p>「片側検定・有意水準1%で有意差有り」 = 「p値 &lt;= 0.01」 = 「統計検定量Z &gt;= 2.326」</p></li>
+</ul>
+
+
+<h2>使い方</h2>
+<hr>
+
+<table border="1" width="100%"><tr><td><pre>
+% java meval.PropTest
+</pre></td></tr></table>
+
+<p>
+上のコマンドを入力すると，以下のようなインタプリタが起動し，入力待ち状態となります
+（「>」は，インタプリタが入力待ちになっていることを意味しています）．
+</p>
+
+<table border="1" width="100%"><tr><td><pre>
+========================================
+MEVAL PROP TEST
+========================================
+Test Precision and Recall
+----------------------------------------
+Method 1:
+ COR>
+</pre></td></tr></table>
+
+<p>まずは，Method1のCOR, PRD, GLDを1つずつ入力し，Enterしていきます．</p>
+
+<table border="1" width="100%"><tr><td><pre>
+Method 1:
+ COR> 19731 [Enter]
+ GLD> 23852 [Enter]
+ PRD> 23121 [Enter]
+</pre></td></tr></table>
+
+<p>次に，同様にしてMethod2のCOR, PRD, GLDを1つずつ入力し，Enterしていきます．</p>
+
+<table border="1" width="100%"><tr><td><pre>
+Method 2:
+ COR> 20024 [Enter]
+ GLD> 23852 [Enter]
+ PRD> 23532 [Enter]
+</pre></td></tr></table>
+
+<p>
+	各Methodの性能評価値（Precision, Recall）が表示され，
+	その下に計算した検定統計量（Z）が表示されます．<br>
+	Zの下には，検定の結果が表示されます．<br>
+	両側検定・片側検定，それぞれについて，
+	有意水準5%（0.005）と1%（0.001）の検定結果が表示されます．<br>
+	有意差がある場合は「SIGNIFICANT」，<br>
+	有意差がない場合は「NOT SIGNIFICANT」と表示されます．<br>
+	下の例では，Precisionに関しては有意差が見られませんが，
+	Recallには有意水準1%の両側検定で有意差が見られます．
+</p>
+
+<table border="1" width="100%"><tr><td><pre>
+========================================
+Precision
+========================================
+Method 1: 0.85338 (19731/23121)
+Method 2: 0.8509264 (20024/23532)
+----------------------------------------
+Z: 0.74648863
+----------------------------------------
+Both-Side Test
+  Significance Level:
+    0.05 (5%): NOT SIGNIFICANT (Z &lt; 1.960)
+    0.01 (1%): NOT SIGNIFICANT (Z &lt; 2.576)
+One-Side Test
+  Significance Level:
+    0.05 (5%): NOT SIGNIFICANT (Z &lt; 1.645)
+    0.01 (1%): NOT SIGNIFICANT (Z &lt; 2.326)
+========================================
+Recall
+========================================
+Method 1: 0.8272262 (19731/23852)
+Method 2: 0.8395103 (20024/23852)
+----------------------------------------
+Z: 3.5999243
+----------------------------------------
+Both-Side Test
+  Significance Level:
+    0.05 (5%): SIGNIFICANT (Z &gt;= 1.960)
+    0.01 (1%): SIGNIFICANT (Z &gt;= 2.576)
+One-Side Test
+  Significance Level:
+    0.05 (5%): SIGNIFICANT (Z &gt;= 1.645)
+    0.01 (1%): SIGNIFICANT (Z &gt;= 2.326)
+</pre></td></tr></table>
+
+
+<h3>必須オプション</h3>
+<p>なし．</p>
+
+<h3>任意オプション</h3>
+<dl>
+	<dt><p>-p, --prec</p></dt>
+	<dd><p>Precisionのみの検定を行う．（デフォルト : PrecisionとRecall）</p></dd>
+
+	<dt><p>-r, --rec</p></dt>
+	<dd><p>Recallのみの検定を行う．（デフォルト : PrecisionとRecall）</p></dd>
+</dl>
+<p>（-pと-rの両方を指定した場合は，デフォルトと同じく，PrecisionとRecall両方の検定を行います）</p>
+<dl>
+	<dt><p>-h, --help</p></dt>
+	<dd><p>ヘルプの表示</p></dd>
+	<dd>
+		<table border="1" width="100%"><tr><td><pre>
+% java meval.PropTest -h
+
+========================================
+MEVAL PROP TEST
+========================================
+
+usage: meval.PropTest [options]
+ -h,--help   Help
+ -p,--prec   Test only precision (Default: Precsion &amp; Recall)
+ -r,--rec    Test only recall (Default: Precsion &amp; Recall)
+		</pre></td></tr></table>
+	</dd>
+</dl>
+
+
+
+<!--ページトップへのリンク-->
+<p><a href="#top">▲ページトップへ</a></p>
+<p><br></p>
+
+
+
+<h2><a name="bootstrap_test">ブートストラップ検定(BootstrapTest)</a></h2>
+<hr>
+<p>
+	F値の検定は，母集団がわからないをため，通常の検定手法を適用することができません．
+	そこで，ブートストラップ法を使用し，２手法のF値の差の1-&alpha;信頼区間に，
+	0が含まれるか否かでF値の検定を実施します．
+	実装には下記の文献より，特に10.1.2節「２つの母集団の母数の比較」から，
+	一般の場合の信頼区間の求め方を参考しました．
+</p>
+<h3>参考文献</h3>
+<hr>
+<p>
+	吉原健一，金川秀也：
+	やさしい統計-いかにして統計データを利用するか，
+	第10章ブートストラップ，
+	pp.139-164，
+	培風館（2007）．
+</p>
+
+<h2>使い方</h2>
+<hr>
+
+<h3>必須オプション</h3>
+<dl>
+	<dt><p>-g1, --gold1 ファイル名</p></dt>
+	<dd><p>Method 1に対する形態素解析の正解アノテーション（<a href="#mecab_style">MeCab形式</a>）</p></dd>
+	
+	<dt><p>-p1, --pred1 ファイル名</p></dt>
+	<dd><p>Method 1の自動形態素解析結果（<a href="#mecab_style">MeCab形式</a>）</p></dd>
+	
+	<dt><p>-p2, --pred2 ファイル名</p></dt>
+	<dd><p>Method 2の自動形態素解析結果（<a href="#mecab_style">MeCab形式</a>）</p></dd>
+</dl>
+
+<p>
+	（-g1で指定したファイルと，-p1で指定したファイルは，いずれも同一のテキストに対して，
+	自動or手動で形態素解析を行なった結果でなくてはいけない．
+	また，ファイル中の文の順序は，両方のファイルで一致している必要がある（-g2と-p2でも同様）．）
+</p>
+
+
+<h3>任意オプション</h3>
+<dl>
+	<dt><p>-g2, --gold2 ファイル名</p></dt>
+	<dd><p>
+		Method 2に対する形態素解析の正解アノテーション（<a href="#mecab_style">MeCab形式</a>）．<br>
+		g1で指定したファイルと同一の場合は省略可．
+	</p></dd>
+	
+	<dt><p>-prec</p></dt>
+	<dd><p>
+		Precisionの検定結果を表示（デフォルト: F値のみ）．
+	</p></dd>
+
+	<dt><p>-rec</p></dt>
+	<dd><p>
+		Recallの検定結果を表示（デフォルト: F値のみ）．
+	</p></dd>
+	
+	<dt><p>-alpha</p></dt>
+	<dd><p>
+		有意水準の設定（デフォルト: 0.01）．
+	</p></dd>
+
+	<dt><p>-f --field"フィールド番号"</p></dt>
+	<dd>
+		<p>
+			検定したいレベルで用いているフィールド番号を指定します．
+			フォーマットは，
+		</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>-f "フィールド番号"</pre>
+		</td></tr></table>
+		<p>であり，例えば，以下のように書きます．</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>-f "1"</pre>
+		</td></tr></table>
+		<p>フィールド番号は一度に複数個指定可能であり，以下のように「+」でつないで記述します．</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>-f "1+2+3+4"</pre>
+		</td></tr></table>
+		<p>
+			デフォルトでは，スコアラーと同じくフィールド0のみで検定を行ないます．<br>
+			-fオプションを指定した場合でも，必ずフィールド0の評価は実施するため，
+			通常-fオプションでは，フィールド0以降の番号を指定します．
+		</p>
+	</p></dd>
+	
+	<dt><p>-h, --help</p></dt>
+	<dd><p> ヘルプの表示</p></dd>
+	<dd>
+		<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.BootstrapTest -h
+
+========================================
+MEVAL BOOTSTRAP TEST
+========================================
+
+usage: meval.BootstrapTest [options]
+ -alpha &lt;arg&gt;        Significance level (Default: 0.001 (1%))
+ -B &lt;arg&gt;            Resampling size (Default: 1000)
+ -f,--field &lt;arg&gt;    Field-numbers using for test (e.g., "1+2+3")
+ -g1,--gold1 &lt;arg&gt;   *Method 1's gold-annotation file (.mecab)
+ -g2,--gold2 &lt;arg&gt;   Method 2's gold-annotation file (.mecab)
+ -h,--help           Help
+ -p1,--pred1 &lt;arg&gt;   *Method 1's system-predict file (.mecab)
+ -p2,--pred2 &lt;arg&gt;   *Method 2's system-predict file (.mecab)
+ -prec               Display Precision's result
+ -rec                Display Recall's result
+</pre>
+		</td></tr></table>
+	</dd>
+	
+</dl>
+
+<h3>使用例</h3>
+
+<table border="1" width="100%"><tr><td><pre>
+% java meval.BootstrapTest -g1 gold.mecab -p1 pred.mecab -p2 pred2.mecab -B 1000 -alpha 0.005 -f "1+2+3+4+5+6+7+8" -prec -rec
+
+========================================
+MEVAL BOOTSTRAP TEST
+========================================
+Method1:
+  Gold:  gold.mecab
+  Pred:  pred.mecab
+Method2:
+  Gold:  gold.mecab
+  Pred:  pred2.mecab
+Target Fields : 0+1+2+3+4+5+6+7+8
+Resampling Size : 1000
+Significance Level : 0.005
+========================================
+Method 1's Corpus:
+       Sentence Num: 5943
+Gold Word Num (GLD): 127893
+Pred Word Num (PRD): 128169
+      Character Num: 202898
+----------------------------------------
+Now Resampling ...
+..........Done!
+----------------------------------------
+Method 2's Corpus:
+       Sentence Num: 5943
+Gold Word Num (GLD): 127893
+Pred Word Num (PRD): 128158
+      Character Num: 202898
+----------------------------------------
+Now Resampling ...
+..........Done!
+========================================
+Precision
+========================================
+Method1: 99.34% (0.99341494)
+Method2: 99.55% (0.99549776)
+----------------------------------------
+Confidence Interval:
+  [-0.004637003, 0.0010128617]
+Result:
+  NOT SIGNIFICANT (0 is in this interval !)
+========================================
+Recall
+========================================
+Method1: 99.56% (0.9955588)
+Method2: 99.76% (0.99756044)
+----------------------------------------
+Confidence Interval:
+  [-0.003870368, -7.70092E-4]
+Result:
+  SIGNIFICANT (0 is NOT in this interval)
+========================================
+F
+========================================
+Method1: 99.34 (0.99448574)
+Method2: 99.55 (0.996528)
+----------------------------------------
+Confidence Interval:
+  [-0.0038545132, -2.3144484E-4]
+Result:
+  SIGNIFICANT (0 is NOT in this interval)
+</pre></td></tr></table>
+
+
+
+<!--ページトップへのリンク-->
+<p><a href="#top">▲ページトップへ</a></p>
+<p><br></p>
+
+
+
+<h1><a name="err_analysis">エラー分析ツール</a></h1>
+<hr>
+
+<h2><a name="wbd_err_analysis">単語境界判定のエラー分析（WbdErrAnalysis）</a></h2>
+<hr>
+
+<p>
+	形態素解析を単語分割+品詞タグ付けと見なしたときの，「単語分割」のエラー分析を行うため，
+	MevALには「単語境界判定（Word Boundary Detection）」の評価及びエラー事例の抽出を行う機能があります．
+</p>
+
+<h3>単語境界判定（≠表層形認定）</h3>
+<hr>
+
+<p>
+	単語境界判定では，単語分割を「文中の各文字間を単語境界と見なすか否か」の２値分類問題をとして考えます．<br>
+	表層形認定では，単語の語頭と語末位置で正しく分割が行われており，かつその語内に誤った分割を含まない場合に限り，
+	認定正解となりました．<br>
+	これに対し，ここでは，ある単語同士の境界が，正しく境界と判定できてさえいれば，それだけで正解（TP）となります．<br>
+	そのため単語境界判定の評価は，表層形認定と同様，Precision，Recall，F値を使いますが，
+	PrecisionとRecallの計算式が異なっています．
+</p>
+<ul>
+	<li><p>Precision = TP / (TP + FP)</p></li>
+	<li><p>Recall = TP / (TP + FN)</p></li>
+	<li><p>F = (2 * Precision * Recall) / (Precision + Recall)</p></li>
+</ul>
+<p>
+	ここでは，TP, FP, FNはそれぞれ以下のように定義されます．
+</p>
+
+<ul>
+	<li><p>TP(TruePositive) : 自動形態素解析結果中の単語境界の内，正解アノテーションにも含まれる境界の数</p></li>
+	<li><p>FP(FalsePositive) : 自動形態素解析結果中の単語境界の内，正解アノテーションには含まれない境界の数</p></li>
+	<li><p>FN(FalseNegative) : 正解アノテーション中の単語境界の内，自動形態素解析結果には含まれない境界の数</p></li>
+</ul>
+
+<table border="1">
+<tr><td>GLD</td><td>す</td><td>も</td><td>も</td><td>｜</td><td>も</td><td>｜</td><td>も</td><td></td><td>も</td><td>｜</td><td>も</td></tr>
+<tr><td>PRD</td><td>す</td><td>も</td><td>も</td><td>｜</td><td>も</td><td></td><td>も</td><td>｜</td><td>も</td><td>｜</td><td>も</td></tr>
+<tr><td></td><td></td><td></td><td></td><td>TP</td><td></td><td>FN</td><td></td><td>FP</td><td></td><td>TP</td><td></td></tr>
+</table>
+
+
+<h2>使い方</h2>
+<hr>
+
+<h3>必須オプション</h3>
+
+<dl>
+	<dt><p>-g, --gold ファイル名</p></dt>
+	<dd><p>形態素解析の正解アノテーション（<a href="#mecab_style">MeCab形式</a>）</p></dd>
+	
+	<dt><p>-p, --pred ファイル名</p></dt>
+	<dd><p>自動形態素解析した結果（<a href="#mecab_style">MeCab形式</a>）</p></dd>
+</dl>
+
+<p>
+	（-gで指定したファイルと，-pで指定したファイルは，いずれも同一のテキストに対して，
+	自動or手動で形態素解析を行なった結果でなくてはいけない．
+	また，ファイル中の文の順序は，両方のファイルで一致している必要がある）
+</p>
+
+<h3>任意オプション</h3>
+<dl>
+	<dt><p>-o, --output ファイル名</p></dt>
+	<dd><p>単語境界判定に失敗した詳細な事例を出力するためのファイルを指定する．</p></dd>
+	<dd>
+		<p>-oオプションを使用しない場合，以下のように単語境界判定の性能評価のみが行われます．</p>
+
+		<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.WbdErrAnalysis -g gold.mecab -p pred.mecab
+
+========================================
+MEVAL WBD-ERR ANALYSIS
+========================================
+Gold:  gold.mecab
+Pred:  pred.mecab
+Output:  null
+----------------------------------------
+       Sentence Num: 5943
+Gold Word Num (GLD): 127893
+Pred Word Num (PRD): 128169
+      Character Num: 202898
+----------------------------------------
+Sentence Boundary Detection Score:
+----------------------------------------
+Prec. : 97.77% (129751/132714 = 0.97767377)
+Rec. :  99.73% (129751/130108 = 0.9972561)
+F  :    98.74  (0.98736787)
+----------------------------------------
+TP: 129751   FP: 2963   FN: 357
+----------------------------------------
+
+...Done!
+</pre>
+		</td></tr></table>
+
+		<p>
+			-oオプションを使用した場合，単語境界判定の性能評価に加えて，
+			以下のような単語境界判定に失敗した事例を抽出し，出力します．
+		</p>
+
+		<table border="1" width="100%"><tr><td>
+<pre>
+FPFN  Sentence Num: 23
+FPFN  GOLD: 友達|と|こ の|間
+FPFN  PRED: 友達|と こ|の|間
+FPFN               FN FP
+FPFN
+//FN  Sentence Num: 43
+//FN  GOLD: て|何|時|に
+//FN  PRED: て|何 時|に
+//FN             FN
+//FN
+FP//  Sentence Num: 4410
+FP//  GOLD: で|ペ ー ス メ ー カ ー|を
+FP//  PRED: で|ペ ー ス|メ ー カ ー|を
+FP//                   FP
+FP//
+</pre>
+		</td></tr></table>
+
+		<p>
+			出力したファイルの中では，事例ごとにヘッダータグが振られ，
+			grepコマンドで特定のエラーを含む事例だけに絞り込めるようになっています．
+		</p>
+
+		<p>ヘッダー</p>
+		<ul>
+			<li><p>FP// : FPを含み，FNは含まない事例</p></li>
+			<li><p>//FN : FNを含み，FPは含まない事例</p></li>
+			<li><p>FPFN : FPとFNの両方を含む事例</p></li>
+		</ul>
+
+		<p>絞り込みの例1：FN"のみ"を含む事例に絞り込みたい場合</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>grep "&circ;//FN" wbd_err.txt</pre>
+		</td></tr></table>
+
+		<p>絞り込みの例2：FNを含む事例（FPFN+//FN）に絞り込みたい場合</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>grep "&circ;..FN"  wbd_err.txt</pre>
+		</td></tr></table>
+	</dd>
+	
+	<dt><p>-h, --help</p></dt>
+	<dd><p> ヘルプの表示</p></dd>
+	<dd>
+		<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.WbdErrAnalysis -h
+
+========================================
+MEVAL WBD-ERR ANALYSIS
+========================================
+
+usage: meval.WbdErrAnalysis [options]
+ -g,--gold &lt;arg&gt;     *Gold-annotation file (.mecab)
+ -h,--help           Help
+ -o,--output &lt;arg&gt;   Output file
+ -p,--pred &lt;arg&gt;     *System-predict file (.mecab)
+</pre>
+		</td></tr></table>
+	</dd>
+</dl>
+
+
+
+<!--ページトップへのリンク-->
+<p><a href="#top">▲ページトップへ</a></p>
+<p><br></p>
+
+
+
+<h2><a name="pos_err_analysis">品詞タグ付けのエラー分析（TagErrAnalysis）</a></h2>
+<hr>
+
+<p>
+	形態素解析を単語分割+品詞タグ付けとみなしたときの，
+	「品詞タグ付け」のエラーの傾向を調べるための機能です．<br>
+	ここでは以下の3つのモードで，それぞれ頻度を集計します．
+</p>	
+<ol>
+	<li><p>正解アノテーション中のタグを，自動解析ではどのタグと誤りやすいか</p></li>
+	<li><p>正解アノテーション中のどのタグが誤って識別されやすいか</p></li>
+	<li><p>自動解析結果中のどのタグが誤っていやすいか</p></li>
+</ol>
+
+
+<h2>使い方</h2>
+<hr>
+
+<h3>必須オプション</h3>
+
+<dl>
+	<dt><p>-g, --gold ファイル名</p></dt>
+	<dd><p>形態素解析の正解アノテーション（<a href="#mecab_style">MeCab形式</a>）</p></dd>
+	
+	<dt><p>-p, --pred ファイル名</p></dt>
+	<dd><p>自動形態素解析した結果（<a href="#mecab_style">MeCab形式</a>）</p></dd>
+</dl>
+	
+<p>
+	（-gで指定したファイルと，-pで指定したファイルは，いずれも同一のテキストに対して，
+	自動or手動で形態素解析を行なった結果でなくてはいけない．
+	また，ファイル中の文の順序は，両方のファイルで一致している必要がある）
+</p>
+
+<dl>
+	<dt><p>-f --field "フィールド番号"</p></dt>
+	<dd>
+		<p>
+			誤り傾向を調査したいフィールド番号を指定します．<br>
+			フォーマットは，
+		</p>
+		<table border="1" width="100%"><tr><td>
+		<pre>-f "フィールド番号"</pre>
+		</td></tr></table>
+		<p>であり，例えば，以下のように書きます．</p>
+		<table border="1" width="100%"><tr><td>
+		<pre>-f "1"</pre>
+		</td></tr></table>
+		<p>フィールド番号は一度に複数個指定可能であり，以下のように「+」でつないで記述します．</p>
+		<table border="1" width="100%"><tr><td>
+		<pre>-f "1+2+3+4"</pre>
+		</td></tr></table>
+		<p>上の例の場合，「フィールド1+フィールド2+フィールド3+フィールド4」を1つのタグと見なしたうえで，誤り頻度をカウントします．</p>
+	</dd>
+</dl>
+
+<h3>任意オプション</h3>
+
+<dl>
+	<dt><p>-m --mode モード番号(0～2)</p></dt>
+	<dd>
+		<p>どういった誤りの頻度を集計したいか選択します（デフォルト: 0）．</p>
+		<dl>
+			<dt><p>モード 0:</p></dt>
+			<dd>
+				<p>正解データ中のタグを自動解析ではどのタグと間違えやすいのかカウントします．</p>
+				<table border="1" width="100%"><tr><td>
+<pre>
+  GOLD  |  ->  |  PRED  |  ERR_NUM
+----------------------------------------
+助動詞  ->      助詞    202
+接尾辞  ->      名詞    75
+名詞    ->      接尾辞  54
+助詞    ->      助動詞  50
+動詞    ->      名詞    31
+英単語  ->      名詞    29
+名詞    ->      動詞    25
+名詞    ->      補助記号        15
+記号    ->      名詞    13
+副詞    ->      名詞    10
+</pre>
+				</td></tr></table>
+				<ul>
+					<li><p>GOLD: 正解タグ</p></li>
+					<li><p>PRED: 自動付与したタグ</p></li>
+					<li><p>ERR_NUM: 自動単語分割に正解した語の内での誤り頻度</p></li>
+				</ul>
+			</dd>
+			<dt><p>モード 1:</p></dt>
+			<dd>
+				<p>
+					正解ファイル中のどのタグが誤って識別されやすいかカウントします．<br>
+					また，2列目の値と3列目の値を使って，各タグのRecallを計算することが可能です．
+				</p>
+				<table border="1" width="100%"><tr><td>
+<pre>
+  GOLD  |  ERR_NUM  |  COR_SEG  |  ALL
+----------------------------------------
+助動詞  207     9134    9158
+名詞    117     42545   42871
+接尾辞  86      4244    4296
+助詞    52      31515   31541
+動詞    43      13457   13486
+英単語  30      30      34
+副詞    24      1487    1493
+記号    14      206     216
+接続詞  12      409     410
+補助記号        9       16447   16482
+</pre>
+				</td></tr></table>
+				<ul>
+					<li><p>GOLD: 正解タグ</p></li>
+					<li><p>ERR_NUM: 自動単語分割に正解した語の内での誤り頻度</p></li>
+					<li><p>
+							COR_SEG: 正解データ中の当該タグの付いた単語が，
+							自動単語分割（表層形（LEVEL 0））に正解した個数
+					</p></li>
+					<li><p>ALL: 正解データ中における当該タグの出現数</p></li>
+				</ul>
+			</dd>
+			<dt><p>モード 2:</p></dt>
+			<dd>
+				<p>
+					自動解析結果中のどのタグが誤っていやすいかカウントします．<br>
+					また，2列目の値と3列目の値を使って，各タグのPrecisionを計算することが可能です．
+				</p>
+				<table border="1" width="100%"><tr><td>
+<pre>
+  PRED  |  ERR_NUM  |  COR_SEG  |  ALL
+----------------------------------------
+助詞    211     31674   31717
+名詞    183     42611   42970
+接尾辞  64      4222    4279
+助動詞  53      8980    9003
+動詞    36      13450   13473
+副詞    19      1482    1492
+補助記号        17      16455   16646
+接頭辞  13      877     884
+形状詞  10      1253    1257
+接続詞  8       405     405
+</pre>
+				</td></tr></table>
+				<ul>
+					<li><p>PRED: 自動付与したタグ</p></li>
+					<li><p>ERR_NUM: 自動単語分割に正解した語の内での誤り頻度</p></li>
+					<li><p>
+							COR_SEG: 自動形態素解析結果中の当該タグの付いた単語が，
+							自動単語分割（表層形（LEVEL 0））に正解している個数
+					</p></li>
+					<li><p>ALL: 自動形態素解析結果中における当該タグの出現数</p></li>
+				</ul>
+			</dd>
+		</dl>
+	</dd>
+	
+	<dt><p>-t --top N</p></dt>
+	<dd><p>
+		-oで指定したファイルへエラーを書きだす際，エラー頻度の上位N件のみ出力します（N&gt;0）
+	</p></dd>
+	
+	<dt><p>-o, --output ファイル名</p></dt>
+	<dd><p>
+		各モードで集計したエラー頻度を出力するためのファイルを指定する．<br>
+		-oオプションを指定しない場合，以下のように，タグ付けの性能が評価されるだけです．
+	</p></dd>
+	<dd>
+		<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.TagErrAnalysis -g gold.mecab -p pred.mecab -m 0 -f "1"
+
+========================================
+MEVAL TAG-ERR ANALYSIS
+========================================
+Gold:  gold.mecab
+Pred:  pred.mecab
+Output:  null
+Target Fields: 1
+----------------------------------------
+       Sentence Num: 5943
+Gold Word Num (GLD): 127893
+Pred Word Num (PRD): 128169
+      Character Num: 202898
+----------------------------------------
+Correctly Tagged Words:    126690
+Correctly Segmented Words: 127325
+Acc. : 99.5% (126690/127325 = 0.99501276)
+----------------------------------------
+
+...Done!
+</pre>
+		</td></tr></table>
+	</dd>
+	
+	<dt><p>-h, --help</p></dt>
+	<dd><p> ヘルプの表示
+	<dd>
+		<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.TagErrAnalysis -h
+
+========================================
+MEVAL TAG-ERR ANALYSIS
+========================================
+
+usage: meval.TagErrAnalysis [options]
+ -f,--field &lt;arg&gt;    *Field numbers using for target level (e.g., "1+2")
+ -g,--gold &lt;arg&gt;     *Gold-annotation file (.mecab)
+ -h,--help           Help
+ -m,--mode &lt;arg&gt;     Output mode (Default: 0)
+                     0: Output frequency of confusion patterns
+                     1: Output frequency of un-distinguished tags in gold
+                     2: Output frequency of incorrect tags in pred
+ -o,--output &lt;arg&gt;   Output file
+ -p,--pred &lt;arg&gt;     *System-predict file (.mecab)
+ -t,--top &lt;arg&gt;      Output top &lt;arg&gt; error instances (Default: MIN(100,
+                     ALL))
+</pre>
+		</td></tr></table>
+	</dd>
+</dl>
+
+
+
+<!--ページトップへのリンク-->
+<p><a href="#top">▲ページトップへ</a></p>
+<p><br></p>
+
+
+
+<h1><a name="tool">その他の便利機能</a></h1>
+<hr>
+
+
+
+<h2><a name="count">コーパスの統計情報の表示（Count）</a></h2>
+<hr>
+
+<p>
+	<a href="#mecab_style">MeCab形式</a>のファイル中の文数，
+	単語数，表層形文字数（Code Point数）をカウントし，表示する．
+</p>
+
+<h2>使い方</h2>
+<hr>
+
+
+<h3>使用例</h3>
+<table border="1" width="100%"><tr><td><pre>
+% java meval.Count -i bccwj_core.mecab
+
+========================================
+MEVAL COUNT
+========================================
+Input:  bccwj_core.mecab
+----------------------------------------
+ Sentence Num: 59432
+     Word Num: 1290060
+Character Num: 2042594
+----------------------------------------
+
+...Done!
+</pre></td></tr></table>
+
+
+<h3>必須オプション</h3>
+<dl>
+	<dt><p>-i, --input ファイル名</p><dt>
+	<dd><p>入力ファイル(<a href="#mecab_style">MeCab形式</a>)</p></dd>
+</dl>
+
+
+<h3>任意オプション</h3>
+<dl>
+	<dt><p>-h, --help</p><dt>
+	<dd><p>ヘルプの表示</p></dd>
+	<dd>
+		<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.Count -h
+
+========================================
+MEVAL COUNT
+========================================
+
+usage: meval.Count [options]
+ -h,--help          Help
+ -i,--input &lt;arg&gt;   *Input corpus (.mecab)
+</pre>
+		</td></tr></table>
+	</dd>
+</dl>
+
+
+
+<!--ページトップへのリンク-->
+<p><a href="#top">▲ページトップへ</a></p>
+<p><br></p>
+
+
+
+<h2><a name="shuffle">シャッフル（Shuffle）</a></h2>
+<hr>
+<p>
+	Mecab形式は1文が複数行で記述されるため，単に「sort -R」コマンドで
+	シャッフルすることができません．
+	そこでMevALには，
+	<a href="#mecab_style">MeCab形式</a>のファイル中の文をシャッフルする機能が搭載されています．<br>
+</p>
+
+<h2>使い方</h2>
+<hr>
+
+<h3>使用例</h3>
+<table border="1" width="100%"><tr><td><pre>
+% java meval.Shuffle -i bccwj_core.mecab -o bccwj_core_shuffle.mecab
+
+========================================
+MEVAL SHUFFLE
+========================================
+Input:   bccwj_core.mecab
+Output:  bccwj_core_shuffle.mecab
+----------------------------------------
+ Sentence Num: 59432
+     Word Num: 1290060
+Character Num: 2042594
+----------------------------------------
+
+...Done!
+</pre></td></tr></table>
+
+
+<h3>必須オプション</h3>
+<dl>
+	<dt><p>-i, --input ファイル名</p><dt>
+	<dd><p>入力ファイル(<a href="#mecab_style">MeCab形式</a>)</p></dd>
+
+	<dt><p>-o, --output ファイル名</p><dt>
+	<dd><p>出力ファイル(<a href="#mecab_style">MeCab形式</a>)</p></dd>
+</dl>
+
+<h3>任意オプション</h3>
+<dl>
+	<dt><p>-h, --help</p><dt>
+	<dd>
+		<p>ヘルプの表示</p>
+		<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.Shuffle -h
+
+========================================
+MEVAL SHUFFLE
+========================================
+
+usage: meval.Shuffle [options]
+ -h,--help           Help
+ -i,--input &lt;arg&gt;    *Input file (.mecab)
+ -o,--output &lt;arg&gt;   *Output file (.mecab)
+
+</pre>
+		</td></tr></table>
+	</dd>
+</dl>
+
+
+
+<!--ページトップへのリンク-->
+<p><a href="#top">▲ページトップへ</a></p>
+<p><br></p>
+
+
+
+<h2><a name="divide">コーパスの分割（Divide）</a></h2>
+<hr>
+<p>
+	<a href="#mecab_style">MeCab形式</a>のファイル中の文を任意の比率で訓練（train），
+	評価（test）（，開発（dev））に分割します．
+</p>
+
+<h2>使い方</h2>
+<hr>
+
+
+<h3>使用例</h3>
+<table border="1" width="100%"><tr><td><pre>
+% java meval.Divide -i bccwj_core.mecab -tr train.mecab -te test.mecab -r "9:1"
+
+========================================
+MEVAL DIVIDE
+========================================
+Input:  bccwj_core.mecab
+Train:  train.mecab
+Test :  test.mecab
+Dividing Ratio:  9:1
+----------------------------------------
+
+...Done!
+
+% java meval.Divide -i bccwj_core.mecab -tr train.mecab -te test.mecab -d dev.mecab -r "8:1:1"
+
+========================================
+MEVAL DIVIDE
+========================================
+Input:  bccwj_core.mecab
+Train:  train.mecab
+Test :  test.mecab
+Dev  :  dev.mecab
+Dividing Ratio:  8:1:1
+----------------------------------------
+
+...Done!
+</pre></td></tr></table>
+
+
+<h3>必須オプション</h3>
+<dl>
+	<dt><p>-i, --input ファイル名</p><dt>
+	<dd><p>入力ファイル(<a href="#mecab_style">MeCab形式</a>)</p></dd>
+	
+	<dt><p>-tr, --train ファイル名</p><dt>
+	<dd><p>出力ファイル(訓練)</p></dd>
+	
+	<dt><p>-te, --test ファイル名</p><dt>
+	<dd><p>出力ファイル(評価)</p></dd>
+</dl>
+
+<h3>任意オプション</h3>
+<dl>
+	<dt><p>-d, --dev ファイル名</p><dt>
+	<dd><p>出力ファイル(開発)の指定．</p></dd>
+	
+	<dt><p>-r --ratio "訓練：評価（：開発）"</p></dt>
+	<dd>
+		<p>以下のように，分割比率を指定します．</p>
+		<table border="1" width="100%"><tr><td>
+			<pre>-r "9:1"</pre>
+		</td></tr></table>
+		<p>
+			上の例だと，入力ファイル中の前半9割の文が訓練となり，
+			残りの１割が評価用となります．<br>
+			また，-dオプションを指定した場合は，以下のように3つの値を指定します．
+		</p>
+		<table border="1" width="100%"><tr><td>
+		<pre>-r "8:1:1"</pre>
+		</td></tr></table>
+		<p>
+		　この例では，前半8割が訓練データとなり，次の1割が評価，残りの1割が開発になります．<br>
+		　また，比率なので，次のような指定も可能です．
+		</p>
+		<table border="1" width="100%"><tr><td>
+		<pre>-r "10:2:3"</pre>
+		</td></tr></table>
+		<p>
+			デフォルトは，9:1もしくは，8:1:1です．
+		</p>
+	</dd>
+	
+	<dt><p>-h, --help</p><dt>
+	<dd>
+		<p>ヘルプの表示</p>
+		<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.Divide -h
+
+========================================
+MEVAL DIVIDE
+========================================
+
+usage: meval.Divide [options]
+ -d,--dev &lt;arg&gt;      Development corpus (.mecab)
+                     (Default: null)
+ -h,--help           Help
+ -i,--input &lt;arg&gt;    *Input corpus (.mecab)
+ -r,--ratio &lt;arg&gt;    Divideing ratio ("Train:Test" or "Train:Test:Dev")
+                     (Default: 9:1 or 8:1:1)
+ -te,--test &lt;arg&gt;    *Test corpus (.mecab)
+ -tr,--train &lt;arg&gt;   *Training corpus (.mecab)
+</pre>
+		</td></tr></table>
+	</dd>
+</dl>
+
+
+
+<!--ページトップへのリンク-->
+<p><a href="#top">▲ページトップへ</a></p>
+<p><br></p>
+
+
+
+<h2><a name="flat">平文化（Flat）</a></h2>
+<hr>
+<p>
+	<a href="#mecab_style">MeCab形式</a>のファイルから表層形だけを抽出し，平文テキスト化します．<br>
+	出力ファイルは，1文1行の形式（入力ファイル中の「EOS」で改行）で出力されます．
+</p>
+
+<h2>使い方</h2>
+<hr>
+
+<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.Flat -i bccwj_core.mecab -o bccwj_core.txt
+
+========================================
+MEVAL FLAT
+========================================
+Input:  bccwj_core.mecab
+Output:  bccwj_core.txt
+----------------------------------------
+ Sentence Num: 59432
+     Word Num: 1290060
+Character Num: 2042594
+----------------------------------------
+
+...Done!
+
+</pre>
+</td></tr></table>
+
+
+<h3>必須オプション</h3>
+<dl>
+	<dt><p>-i, --input ファイル名</p><dt>
+	<dd><p>入力ファイル(<a href="#mecab_style">MeCab形式</a>)</p></dd>
+	
+	<dt><p>-o, --output ファイル名</p><dt>
+	<dd><p>出力ファイル(.txt)</p></dd>
+</dl>
+
+<h3>任意オプション</h3>
+<dl>
+	<dt><p>-h, --help</p><dt>
+	<dd><p>ヘルプの表示</p></dd>
+	<dd>
+		<table border="1" width="100%"><tr><td>
+<pre>
+% java meval.Flat -h
+
+========================================
+MEVAL FLAT
+========================================
+
+usage: meval.Flat [options]
+ -h,--help           Help
+ -i,--input &lt;arg&gt;    *Input file (.mecab)
+ -o,--output &lt;arg&gt;   *Raw text file (.txt)
+
+</pre>
+		</td></tr></table>
+	</dd>
+</dl>
+
+
+
+<!--ページトップへのリンク-->
+<p><a href="#top">▲ページトップへ</a></p>
+<p><br></p>
+
+
+
+</body>
+
+</html>
