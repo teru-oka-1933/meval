@@ -65,15 +65,34 @@ EOS
 <h1>更新履歴</h1>
 <hr>
 <dl>
+	<dt>2017.01.21</dt>
+	<dd>
+		<p>
+			・ <a href="https://github.com/teru-oka-1933/meval">リポジトリページ</a>へのリンクを設定<br>
+			・ 本ページの文言微修正<br>
+			・ MITライセンスを付与<br>
+		</p>
+	</dd>
+	<dt>2016.12.01</dt>
+	<dd>
+		<p>
+			・ <a href="https://github.com/teru-oka-1933/meval">github</a>へ移動<br>
+			・ ソースコード公開開始
+		</p>
+	</dd>
 	<dt>2014.12.10</dt>
-	<dd><a href="jar/meval_beta.jar">BETA版</a> 公開．</dd>
+	<dd><a href="jar/meval_beta.jar">BETA版</a> 公開</dd>
 </dl>
 
 
 <h1>ダウンロード</h1>
 <hr>
 <p>Jarファイルを公開しています．下記のファイルをダウンロードし，クラスパスを通して使用してください．</p>
-<h3>最新版</h3><p><a href="jar/meval_beta.jar">meval_beta.jar</a></p>
+<h3>最新版</h3>
+<p>
+	<a href="jar/meval_beta.jar">meval_beta.jar</a><br>
+	<a href="https://github.com/teru-oka-1933/meval">ソースファイル</a>
+</p>
 <p>
 	またMevALを使用するためには，以下のライブラリが必要です．<br>
 	それぞれ下記のページからあらかじめダウンロードし，クラスパスを通しておいてください．<br>
@@ -618,7 +637,7 @@ usage: meval.PropTest [options]
 		有意水準の設定（デフォルト: 0.01）．
 	</p></dd>
 
-	<dt><p>-f --field"フィールド番号"</p></dt>
+	<dt><p>-f, --field"フィールド番号"</p></dt>
 	<dd>
 		<p>
 			検定したいレベルで用いているフィールド番号を指定します．
@@ -845,6 +864,12 @@ TP: 129751   FP: 2963   FN: 357
 		</td></tr></table>
 
 		<p>
+			実行結果には「<strong>Sentence Boundary Detection Score</strong>」と表示されていますが，<br>
+			これは「<strong>Word Boundary Detection Score</strong>」の間違いです．<br>
+			いずれ修正します．
+		</p>
+
+		<p>
 			-oオプションを使用した場合，単語境界判定の性能評価に加えて，
 			以下のような単語境界判定に失敗した事例を抽出し，出力します．
 		</p>
@@ -956,7 +981,7 @@ usage: meval.WbdErrAnalysis [options]
 </p>
 
 <dl>
-	<dt><p>-f --field "フィールド番号"</p></dt>
+	<dt><p>-f, --field "フィールド番号"</p></dt>
 	<dd>
 		<p>
 			誤り傾向を調査したいフィールド番号を指定します．<br>
@@ -980,7 +1005,7 @@ usage: meval.WbdErrAnalysis [options]
 <h3>任意オプション</h3>
 
 <dl>
-	<dt><p>-m --mode モード番号(0～2)</p></dt>
+	<dt><p>-m, --mode モード番号(0～2)</p></dt>
 	<dd>
 		<p>どういった誤りの頻度を集計したいか選択します（デフォルト: 0）．</p>
 		<dl>
@@ -1076,7 +1101,7 @@ usage: meval.WbdErrAnalysis [options]
 		</dl>
 	</dd>
 	
-	<dt><p>-t --top N</p></dt>
+	<dt><p>-t, --top N</p></dt>
 	<dd><p>
 		-oで指定したファイルへエラーを書きだす際，エラー頻度の上位N件のみ出力します（N&gt;0）
 	</p></dd>
@@ -1351,7 +1376,7 @@ Dividing Ratio:  8:1:1
 	<dt><p>-d, --dev ファイル名</p><dt>
 	<dd><p>出力ファイル(開発)の指定．</p></dd>
 	
-	<dt><p>-r --ratio "訓練：評価（：開発）"</p></dt>
+	<dt><p>-r, --ratio "訓練：評価（：開発）"</p></dt>
 	<dd>
 		<p>以下のように，分割比率を指定します．</p>
 		<table border="1" width="100%"><tr><td>
