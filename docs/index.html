@@ -103,7 +103,7 @@ EOS
 			<ul>
 				<h3>commons-cli</h3>
 				<p><a href="http://commons.apache.org/proper/commons-cli/">http://commons.apache.org/proper/commons-cli/</a></p>
-				<p>（commons-cli-1.2.jarで動作を確認）</p>
+				<p>（<a href="https://github.com/teru-oka-1933/meval/jar_file_archive/commons-cli-1.2/">commons-cli-1.2.jar</a>で動作を確認）</p>
 			</ul>
 		</li>
 		<li>
@@ -111,12 +111,19 @@ EOS
 			<ul>
 				<h3>icu</h3>
 				<p><a href="http://site.icu-project.org/">http://site.icu-project.org/</a></p>
-				<p>（icu4j-50_1_1.jarで動作を確認）</p>
+				<p>（<a href=https://github.com/teru-oka-1933/jar_file_archive/icu4j-50_1_1> icu4j-50_1_1.jar</a>で動作を確認）</p>
 			</ul>
 		</li>
 	</ul>
 </p>
-
+<dl>
+<dt>クラスパスの通し方がわからない人のために</dt>
+<dd>
+	<p>実行時，以下のようにオプションでjarファイルを直接指定してください．</p>
+	<table border="1" width="100%"><tr><td><pre>% java -cp /home/teru-oka-1933/java_lib/meval_beta.jar:/home/teru-oka-1933/java_lib/commons-cli-1.2.jar:/home/teru-oka-1933/java_lib/icu4j-50_1_1.jar meval.Scorer -h</pre></td></tr></table>
+	<p>上記のファイルの置き場所は一例です．丸コピせずに各自ダウンロードしたjarファイルを置いた場所に書き換えて実行してください．</p>
+</dd>
+</dl>
 
 <h1>MevALでできること</h1>
 <hr>
